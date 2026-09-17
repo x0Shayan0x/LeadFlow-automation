@@ -1,0 +1,564 @@
+{
+  "name": "LF-01 Lead Intake",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leadflow/intake",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ddcc9b93-3d99-40c5-9a02-5815a2b44460",
+      "name": "Webhook",
+      "webhookId": "1ac86883-79f3-46cf-adc4-dacbf8831789"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a3c4d8d8-2f4b-4016-b15e-cd6c773bf6b7",
+              "name": "=full_name",
+              "value": "={{ typeof $json.body?.full_name === 'string' ? $json.body.full_name.trim() : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "38885ffd-77e0-434c-94b5-59df069bc4cd",
+              "name": "=email",
+              "value": "={{ typeof $json.body?.email === 'string' ? $json.body.email.trim().toLowerCase() : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "2a257432-29d9-43ba-9dea-1e50c1e64cf5",
+              "name": "=company",
+              "value": "={{ typeof $json.body?.company === 'string' ? $json.body.company.trim() : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "2ed8658c-83a9-4c8a-ad00-a90badbbf6cd",
+              "name": "=role",
+              "value": "={{ typeof $json.body?.role === 'string' ? $json.body.role.trim() : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "b2f04a9c-7093-4646-91c2-2f118cccfe2f",
+              "name": "=website",
+              "value": "={{ typeof $json.body?.website === 'string' ? $json.body.website.trim() : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "67b61a8e-30d1-418d-8a53-74d71f6a2cf4",
+              "name": "=source",
+              "value": "={{ typeof $json.body?.source === 'string' ? $json.body.source.trim().toLowerCase() : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "1b45b2e2-14bf-427d-a797-add221828a24",
+              "name": "=notes",
+              "value": "={{ typeof $json.body?.notes === 'string' ? $json.body.notes.trim() : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "240ce53d-d3a6-417a-8ea1-6984f4c4d2d3",
+              "name": "=received_at",
+              "value": "={{ $now.toUTC().toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "9f802beb-4d37-4f83-9374-8103e29d295c",
+              "name": "=workflow_execution_id",
+              "value": "={{ $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "eb3d3520-4eb3-4309-b9b9-5a3922dc2b30",
+              "name": "status",
+              "value": "received",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "ad320ea6-f4b0-49ed-ae26-1941a292995f",
+      "name": "Normalize Lead"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allowedSources = new Set([\n  'website',\n  'form',\n  'api',\n  'facebook_ads',\n  'extension',\n  'playwright',\n  'manual',\n])\n\nreturn $input.all().map((item) => {\n  const lead = item.json;\n  const errors = [];\n\n  function addError(field, code, message) {\n    errors.push({\n      field,\n      code,\n      message,\n    });\n  }\n\n  if (!lead.full_name) {\n    addError(\n      'full_name',\n      'required',\n      'Full name is required.',\n    );\n  } else if (lead.full_name.length < 2 || lead.full_name.length > 100) {\n    addError(\n      'full_name',\n      'invalid_length',\n      'Full name must contain between 2 and 100 characters.',\n    );\n  }\n\n  // Validate the email without pretending to implement the entire email RFC.\n  if (!lead.email) {\n    addError(\n      'email',\n      'required',\n      'Email is required.',\n    );\n  } else if (lead.email.length > 254) {\n    addError(\n      'email',\n      'invalid_length',\n      'Email must not exceed 254 characters.',\n    );\n  } else if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(lead.email)) {\n    addError(\n      'email',\n      'invalid_format',\n      'Email must have a valid format.',\n    );\n  }\n\n  // LeadFlow is initially designed for B2B leads.\n  if (!lead.company) {\n    addError(\n      'company',\n      'required',\n      'Company is required.',\n    );\n  } else if (lead.company.length > 150) {\n    addError(\n      'company',\n      'invalid_length',\n      'Company must not exceed 150 characters.',\n    );\n  }\n\n  if (lead.role.length > 150) {\n    addError(\n      'role',\n      'invalid_length',\n      'Role must not exceed 150 characters.',\n    );\n  }\n\n  // A website is optional, but it must be a valid HTTP(S) URL when provided.\n  if (lead.website) {\n  const usesHttpProtocol = /^https?:\\/\\//i.test(lead.website);\n\n  const hasValidHttpUrlShape =\n    /^https?:\\/\\/[^/\\s?#]+(?:[/?#][^\\s]*)?$/i.test(lead.website);\n\n  if (lead.website.length > 2048) {\n    addError(\n      'website',\n      'invalid_length',\n      'Website must not exceed 2048 characters.',\n    );\n  } else if (!usesHttpProtocol) {\n    addError(\n      'website',\n      'invalid_protocol',\n      'Website must use HTTP or HTTPS.',\n    );\n  } else if (!hasValidHttpUrlShape) {\n      addError(\n        'website',\n        'invalid_format',\n        'Website must be a valid URL.',\n      );\n    }\n  }\n\n  if (!lead.source) {\n    addError(\n      'source',\n      'required',\n      'Lead source is required.',\n    );\n  } else if (!allowedSources.has(lead.source)) {\n    addError(\n      'source',\n      'unsupported_value',\n      `Source must be one of: ${[...allowedSources].join(', ')}.`,\n    );\n  }\n\n  if (lead.notes.length > 2000) {\n    addError(\n      'notes',\n      'invalid_length',\n      'Notes must not exceed 2000 characters.',\n    );\n  }\n\n  const isValid = errors.length === 0;\n\n  return {\n    json: {\n      ...lead,\n      status: isValid ? 'validated' : 'rejected',\n      validation: {\n        is_valid: isValid,\n        errors,\n      },\n    },\n  };\n})"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "35b3cc17-a9e5-4b21-b9da-fc0c5a1aaec1",
+      "name": "Validate Lead"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0716f544-bc3e-47d4-b6b9-e4848cb7f7c4",
+              "leftValue": "={{ $json.validation.is_valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "ac46e676-a25e-41ab-b0e5-9c400b29dd85",
+      "name": "Lead Valid?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    success: true,\n    message: 'Lead accepted.',\n    workflow_execution_id: $json.workflow_execution_id,\n    received_at: $json.received_at,\n    status: $json.status\n  }\n}}",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1056,
+        -160
+      ],
+      "id": "9b29f591-2d56-4248-bfd5-63bf67c1d4d9",
+      "name": "Respond - Lead Accepted"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  {\n    success: false,\n    message: 'Lead validation failed.',\n    workflow_execution_id:\n      $('Validate Lead').first().json.workflow_execution_id,\n    status:\n      $('Validate Lead').first().json.status,\n    errors:\n      $('Validate Lead').first().json.validation.errors\n  }\n}}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1056,
+        112
+      ],
+      "id": "78cf673d-bf12-40f1-8d24-6486a0c98647",
+      "name": "Respond - Invalid Lead"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1k6L6IWSaq_6Z_nEwPxZlyYT3GdjxtKWVNwsRcf-SdTY",
+          "mode": "list",
+          "cachedResultName": "LeadFlow Demo",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1k6L6IWSaq_6Z_nEwPxZlyYT3GdjxtKWVNwsRcf-SdTY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1k6L6IWSaq_6Z_nEwPxZlyYT3GdjxtKWVNwsRcf-SdTY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "workflow_execution_id": "={{ $json.workflow_execution_id }}",
+            "received_at": "={{ $json.received_at }}",
+            "full_name": "={{ $json.full_name }}",
+            "email": "={{ $json.email }}",
+            "company": "={{ $json.company }}",
+            "role": "={{ $json.role }}",
+            "website": "={{ $json.website }}",
+            "source": "={{ $json.source }}",
+            "notes": "={{ $json.notes }}",
+            "status": "={{ $json.status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "workflow_execution_id",
+              "displayName": "workflow_execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        848,
+        -96
+      ],
+      "id": "bc48014e-0e0f-4fe1-81ae-fde153efc192",
+      "name": "Store Valid Lead - Google Sheets"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "cachedResultName": "LeadFlow Demo"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1171489255,
+          "mode": "list",
+          "cachedResultName": "Errors"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "workflow_execution_id": "={{ $json.workflow_execution_id }}",
+            "received_at": "={{ $json.received_at }}",
+            "full_name": "={{ $json.full_name }}",
+            "email": "={{ $json.email }}",
+            "company": "={{ $json.company }}",
+            "role": "={{ $json.role }}",
+            "website": "={{ $json.website }}",
+            "source": "={{ $json.source }}",
+            "notes": "={{ $json.notes }}",
+            "status": "={{ $json.status }}",
+            "errors_json": "={{ JSON.stringify($json.validation.errors) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "workflow_execution_id",
+              "displayName": "workflow_execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "errors_json",
+              "displayName": "errors_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        64
+      ],
+      "id": "62a17696-74a3-494d-9de4-1818db8da878",
+      "name": "Log Rejected Lead - Google Sheets",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dfjxWpXNUAZspSTf",
+          "name": "LeadFlow Google Sheets"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "Validate Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Lead": {
+      "main": [
+        [
+          {
+            "node": "Lead Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Valid?": {
+      "main": [
+        [
+          {
+            "node": "Store Valid Lead - Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rejected Lead - Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Valid Lead - Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Respond - Lead Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Rejected Lead - Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Respond - Invalid Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6c409ab0-55ec-470a-a4ff-17cf56a0062e",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "pzSRTuhlLDnzk0jc",
+  "tags": []
+}
