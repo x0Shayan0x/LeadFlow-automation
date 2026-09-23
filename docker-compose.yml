@@ -53,6 +53,9 @@ services:
       APP_ENVIRONMENT: development
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
 
+    volumes:
+      - ./backend:/app
+
     depends_on:
       postgres:
         condition: service_healthy
