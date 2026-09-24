@@ -146,15 +146,15 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{\n  {\n    success: true,\n    message: 'Lead accepted.',\n    workflow_execution_id: $json.workflow_execution_id,\n    received_at: $json.received_at,\n    status: $json.status\n  }\n}}",
+        "responseBody": "={{\n  {\n    success: true,\n    message:\n      $('Persist Lead - API').first().json.operation === 'created'\n        ? 'Lead created.'\n        : 'Existing lead updated.',\n    operation:\n      $('Persist Lead - API').first().json.operation,\n    lead_id:\n      $('Persist Lead - API').first().json.lead.id,\n    workflow_execution_id:\n      $('Persist Lead - API').first().json.lead.workflow_execution_id,\n    received_at:\n      $('Persist Lead - API').first().json.lead.last_received_at,\n    status:\n      $('Persist Lead - API').first().json.lead.status,\n    occurrence_count:\n      $('Persist Lead - API').first().json.lead.occurrence_count\n  }\n}}",
         "options": {
-          "responseCode": 201
+          "responseCode": "={{ $('Persist Lead - API').first().json.operation === 'created' ? 201 : 200 }}"
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1056,
+        1280,
         -160
       ],
       "id": "9b29f591-2d56-4248-bfd5-63bf67c1d4d9",
@@ -171,7 +171,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1056,
+        1280,
         112
       ],
       "id": "78cf673d-bf12-40f1-8d24-6486a0c98647",
@@ -180,33 +180,28 @@
     {
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "1k6L6IWSaq_6Z_nEwPxZlyYT3GdjxtKWVNwsRcf-SdTY",
-          "mode": "list",
-          "cachedResultName": "LeadFlow Demo",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1k6L6IWSaq_6Z_nEwPxZlyYT3GdjxtKWVNwsRcf-SdTY/edit?usp=drivesdk"
-        },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
-          "cachedResultName": "Leads",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1k6L6IWSaq_6Z_nEwPxZlyYT3GdjxtKWVNwsRcf-SdTY/edit#gid=0"
+          "cachedResultName": "Leads"
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "workflow_execution_id": "={{ $json.workflow_execution_id }}",
-            "received_at": "={{ $json.received_at }}",
-            "full_name": "={{ $json.full_name }}",
-            "email": "={{ $json.email }}",
-            "company": "={{ $json.company }}",
-            "role": "={{ $json.role }}",
-            "website": "={{ $json.website }}",
-            "source": "={{ $json.source }}",
-            "notes": "={{ $json.notes }}",
-            "status": "={{ $json.status }}"
+            "workflow_execution_id": "={{ $json.lead.workflow_execution_id }}",
+            "received_at": "={{ $json.lead.last_received_at }}",
+            "full_name": "={{ $json.lead.full_name }}",
+            "email": "={{ $json.lead.email }}",
+            "company": "={{ $json.lead.company }}",
+            "role": "={{ $json.lead.role }}",
+            "website": "={{ $json.lead.website }}",
+            "source": "={{ $json.lead.source }}",
+            "notes": "={{ $json.lead.notes }}",
+            "status": "={{ $json.lead.status }}",
+            "lead_id": "={{ $json.lead.id }}",
+            "operation": "={{ $json.operation }}",
+            "occurence_count": "={{ $json.lead.occurrence_count }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -217,7 +212,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "received_at",
@@ -226,7 +222,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "full_name",
@@ -235,7 +232,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "email",
@@ -244,7 +242,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "company",
@@ -253,7 +252,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "role",
@@ -262,7 +262,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "website",
@@ -271,7 +272,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "source",
@@ -290,7 +292,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "status",
@@ -299,33 +302,56 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "operation",
+              "displayName": "operation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "occurence_count",
+              "displayName": "occurence_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         },
-        "options": {
-          "cellFormat": "RAW"
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        848,
+        1072,
         -96
       ],
-      "id": "bc48014e-0e0f-4fe1-81ae-fde153efc192",
       "name": "Store Valid Lead - Google Sheets"
     },
     {
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "cachedResultName": "LeadFlow Demo"
-        },
         "sheetName": {
           "__rl": true,
           "value": 1171489255,
@@ -459,18 +485,70 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        880,
-        64
+        944,
+        48
       ],
-      "id": "62a17696-74a3-494d-9de4-1818db8da878",
       "name": "Log Rejected Lead - Google Sheets",
-      "alwaysOutputData": false,
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "dfjxWpXNUAZspSTf",
-          "name": "LeadFlow Google Sheets"
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/api/v1/leads",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "full_name",
+              "value": "={{ $json.full_name }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "company",
+              "value": "={{ $json.company }}"
+            },
+            {
+              "name": "role",
+              "value": "={{ $json.role || null }}"
+            },
+            {
+              "name": "website",
+              "value": "={{ $json.website || null }}"
+            },
+            {
+              "name": "source",
+              "value": "={{ $json.source }}"
+            },
+            {
+              "name": "notes",
+              "value": "={{ $json.notes || null }}"
+            },
+            {
+              "name": "workflow_execution_id",
+              "value": "={{ $json.workflow_execution_id }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
         }
-      }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        864,
+        -96
+      ],
+      "id": "c162752c-f8c1-470d-90bc-178b5dce0fad",
+      "name": "Persist Lead - API"
     }
   ],
   "pinData": {},
@@ -512,7 +590,7 @@
       "main": [
         [
           {
-            "node": "Store Valid Lead - Google Sheets",
+            "node": "Persist Lead - API",
             "type": "main",
             "index": 0
           }
@@ -547,6 +625,17 @@
           }
         ]
       ]
+    },
+    "Persist Lead - API": {
+      "main": [
+        [
+          {
+            "node": "Store Valid Lead - Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -554,10 +643,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "6c409ab0-55ec-470a-a4ff-17cf56a0062e",
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
+  "versionId": "51a82aca-3e5f-4628-88c6-c4ca8280f116",
   "nodeGroups": [],
   "id": "pzSRTuhlLDnzk0jc",
   "tags": []

@@ -6,9 +6,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.routes.leads import router as leads_router
 from app.core.config import settings
 from app.db.session import engine, get_db_session
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -22,6 +22,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.include_router(leads_router)
 
 @app.get("/health", tags=["Health"])
 async def health_check() -> dict[str, str]:

@@ -3,22 +3,34 @@
 LeadFlow is a multi-source sales lead automation platform built with
 n8n, FastAPI, PostgreSQL and React.
 
-## Stage 1
+## Current Implementation — Stage 2
 
-The first workflow currently:
+- Authenticated n8n webhook
+- Lead normalization and validation
+- Structured validation errors
+- FastAPI REST API
+- PostgreSQL persistence
+- Email-based lead deduplication
+- Alembic database migrations
+- Google Sheets lead and error logging
+- Docker Compose development environment
 
-- Accepts leads through an authenticated webhook
-- Normalizes incoming fields
-- Validates names, emails, companies, URLs and sources
-- Returns structured 201 or 400 responses
-- Stores accepted leads in Google Sheets
-- Logs rejected leads and validation errors separately
+## Current Workflow
 
-## Current workflow
+Website/API
+→ n8n webhook
+→ validation
+→ FastAPI
+→ PostgreSQL deduplication
+→ Google Sheets
+→ webhook response
 
-Webhook → Normalize → Validate → Route
-- Valid → Google Sheets Leads → 201
-- Invalid → Google Sheets Errors → 400
+## API Endpoints
+
+- `GET /health`
+- `GET /health/db`
+- `POST /api/v1/leads`
+
 
 ## Sample request
 
@@ -26,13 +38,13 @@ The lead-intake webhook accepts JSON in the following format:
 
 ```json
 {
-  "full_name": "Sarah Khan",
-  "email": "sarah@acme.test",
-  "company": "Acme",
-  "role": "Operations Manager",
-  "website": "https://acme.test",
-  "source": "website",
-  "notes": "Interested in CRM automation"
+    "full_name": "Layla Hassan",
+    "email": "LAYLA@NOVA.TEST",
+    "company": "Nova Systems",
+    "role": "Sales Director",
+    "website": "https://nova.test",
+    "source": "Website",
+    "notes": "Interested in lead automation"
 }
 ```
 
@@ -49,18 +61,19 @@ Supported source values are:
 ### Example request
 
 ```bash
-curl -X POST \
+curl -i \
+  -X POST \
   http://localhost:5678/webhook/leadflow/intake \
   -H 'Content-Type: application/json' \
-  -H 'X-LeadFlow-Key: <your-webhook-key>' \
+  -H "X-LeadFlow-Key: {YOUR_KEY}" \
   --data-raw '{
-    "full_name": "Sarah Khan",
-    "email": "sarah@acme.test",
-    "company": "Acme",
-    "role": "Operations Manager",
-    "website": "https://acme.test",
-    "source": "website",
-    "notes": "Interested in CRM automation"
+    "full_name": "Layla Hassan",
+    "email": "LAYLA@NOVA.TEST",
+    "company": "Nova Systems",
+    "role": "Sales Director",
+    "website": "https://nova.test",
+    "source": "Website",
+    "notes": "Interested in lead automation"
   }'
 ```
 
